@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 import socket
 from typing import Any, Callable, Dict, List, Tuple, Union
 
@@ -7,6 +9,7 @@ import torch
 from deepspeed import DeepSpeedEngine
 from datasets import Dataset
 from transformers import AutoTokenizer, PreTrainedModel
+import wandb
 
 
 DEFAULT_SYSTEM_MESSAGE = "You are a helpful assistant. You first thinks about the reasoning process in the mind and then provides the user with the answer."
@@ -74,13 +77,17 @@ def prepare_model_inputs(
             ])
         }
     """
-    max_seq_len = max(len(q) + len(r) for q, r in zip(query_token_ids, response_token_ids))
+    max_seq_len = max(
+        len(q) + len(r) for q, r in zip(query_token_ids, response_token_ids)
+    )
     inputs = {"input_ids": [], "attention_mask": [], "labels": [], "advantages": []}
 
     pad_token_id = 0  # Doesn't matter, will be masked
     ignore_index = -100
 
-    for query, response, advantage in zip(query_token_ids, response_token_ids, advantages):
+    for query, response, advantage in zip(
+        query_token_ids, response_token_ids, advantages
+    ):
         combined_ids = query + response
         seq_len = len(combined_ids)
 
@@ -198,6 +205,7 @@ def find_free_port():
         port = s.getsockname()[1]
     return port
 
+
 def evaluate_on_test_set(
     inference_engine: sglang.Engine,
     test_dataset: Dataset,
@@ -262,6 +270,69 @@ def evaluate_on_test_set(
         for k, v in reward_components.items():
             metrics.setdefault(f"reward_metrics/{k}", []).append(v)
 
-    return {
-        k: np.mean(v) for k, v in metrics.items()
-    }
+    return {k: np.mean(v) for k, v in metrics.items()}
+
+
+def dump_episodes(
+    episodes: Dict[str, Any],
+    episodes_stats: Dict[str, Any],
+    exp_dir: Path,
+    tokenizer: AutoTokenizer,
+    iteration: int,
+) -> wandb.Table:
+    query_token_ids = episodes["all_query_token_ids"]
+    response_token_ids = episodes["all_response_token_ids"]
+    rewards = episodes_stats["rewards"]
+    response_lengths = episodes_stats["response_lengths"]
+
+    query_texts = tokenizer.batch_decode(
+        query_token_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
+    )
+    response_texts = tokenizer.batch_decode(
+        response_token_ids,
+        skip_special_tokens=False,
+        clean_up_tokenization_spaces=False,
+    )
+
+    
+    print(
+        f"########## Example 1 (Reward: {rewards[0]}, Response Length: {response_lengths[0]})"
+    )
+    print(f"#### Query:\n`{query_texts[0]}`")
+    print(f"#### Response:\n`{response_texts[0]}`\n\n")
+
+    print(
+        f"########## Example 2 (Reward: {rewards[1]}, Response Length: {response_lengths[1]})"
+    )
+    print(f"#### Query:\n`{query_texts[1]}`")
+    print(f"#### Response:\n`{response_texts[1]}`\n\n")
+
+    episodes_dir = exp_dir / "episodes"
+    episodes_dir.mkdir(parents=True, exist_ok=True)
+
+    with open(episodes_dir / f"eps_{iteration:06d}.json", "w") as f:
+        json.dump(
+            [
+                {
+                    "query": query_texts[i],
+                    "response": response_texts[i],
+                    "reward": rewards[i],
+                }
+                for i in range(len(query_texts))
+            ],
+            f,
+        )
+
+
+    # Create wandb table
+    table = wandb.Table(columns=["query", "response", "reward", "response_length"])
+    for i in range(len(query_texts)):
+        table.add_data(
+            query_texts[i],
+            response_texts[i],
+            rewards[i],
+            response_lengths[i]
+        )
+    
+
+    return table
