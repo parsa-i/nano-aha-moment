@@ -49,5 +49,6 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to b
    Make sure to install the **Jupyter** and **Python** extensions in VS Code for a smoother experience.
 
 ## File Descriptions
-`r1_gold.ipynb` is the ground truth implementation. `r1_todo.ipynb` misses some components and you need to fill those without looking at the `r1_gold.ipynb`. `r1_script.py` is also just the `r1_gold` but for convenience of running with python.
-```
+- `r1_gold.ipynb` is the ground truth implementation.
+- `r1_todo.ipynb` misses some components and you need to fill those without looking at the `r1_gold.ipynb`.
+- `r1_script.py` is also just the `r1_gold` but for convenience of running with python.
