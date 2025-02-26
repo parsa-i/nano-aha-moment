@@ -12,15 +12,28 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to b
    ```
 
 2. **Install dependencies**  
-   Run the following command:  
+   First, load the necessay cuda tools:
    ```bash
-   pip install -r requirements.txt
+   module load cudatoolkit/12.5
    ```  
-   This should work on the Mila cluster. If it fails, manually install the required packages:  
+   Next, install torch:  
    ```bash
-   pip install torch transformers deepspeed sglang
+   pip install torch
    ```  
-   Additionally, follow the installation guide on the [sglang website](https://docs.sglang.ai/start/install.html) for any missing dependencies.
+   Next, follow the installation guide on the [sglang website](https://docs.sglang.ai/start/install.html) for installing sglang. 
+   ```bash
+   pip install "sglang[all]>=0.4.3.post2" --find-links https://flashinfer.ai/whl/cu124/torch2.5/flashinfer-python
+   ```  
+   Next,
+   ```bash
+   pip install transformers deepspeed jupyter wandb
+   ``` 
+   Next, install flash attention,
+   ```bash
+   pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.2.post1/flash_attn-2.7.2.post1+cu12torch2.5cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+   ``` 
+   You should be set.
+    
 
 3. **Start an interactive job on the cluster**  
    Request resources using:  
@@ -34,4 +47,7 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to b
 
 5. **Install VS Code extensions**  
    Make sure to install the **Jupyter** and **Python** extensions in VS Code for a smoother experience.
+
+## File Descriptions
+`r1_gold.ipynb` is the ground truth implementation. `r1_todo.ipynb` misses some components and you need to fill those without looking at the `r1_gold.ipynb`. `r1_script.py` is also just the `r1_gold` but for convenience of running with python.
 ```

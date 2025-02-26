@@ -4,7 +4,7 @@ from pathlib import Path
 SCRATCH = Path.home() / "scratch"
 
 os.environ["HF_HOME"] = str(SCRATCH / "hf_home")
-# os.environ["CUDA_HOME"] = "/cvmfs/ai.mila.quebec/apps/arch/common/cuda/12.5.1" # Hardcoded for now
+os.environ["CUDA_HOME"] = "/cvmfs/ai.mila.quebec/apps/arch/common/cuda/12.5.1" # Hardcoded for now
 # os.environ["HF_TOKEN"] = "..." # Optional. Only needed for Llama models
 
 import argparse
