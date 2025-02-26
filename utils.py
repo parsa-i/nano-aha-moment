@@ -1,8 +1,11 @@
 import socket
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
+import numpy as np
+import sglang
 import torch
 from deepspeed import DeepSpeedEngine
+from datasets import Dataset
 from transformers import AutoTokenizer, PreTrainedModel
 
 
@@ -31,26 +34,26 @@ def create_prompt(
 
 
 def prepare_model_inputs(
-    query_ids: List[List[int]],
-    response_ids: List[List[int]],
+    query_token_ids: List[List[int]],
+    response_token_ids: List[List[int]],
     advantages: List[List[float]],
     device: torch.device,
 ) -> Dict[str, torch.Tensor]:
     """
     Prepare padded model inputs with attention masks, labels, and advantages.
     Args:
-        query_ids: List of query ids
-        response_ids: List of response ids
-        advantages: List of lists of advantage values, matching response_ids structure
+        query_token_ids: List of query token ids
+        response_token_ids: List of response token ids
+        advantages: List of lists of advantage values, matching response_token_ids structure
         device: Device to move the tensors to
     Returns:
         Dict with input_ids, attention_mask, labels, and advantages
 
     Example:
-        >>> query_ids = [[1, 2, 3], [4, 5]]
-        >>> response_ids = [[6, 7], [8]]
+        >>> query_token_ids = [[1, 2, 3], [4, 5]]
+        >>> response_token_ids = [[6, 7], [8]]
         >>> advantages = [[0.5, 0.8], [0.3]]
-        >>> outputs = prepare_model_inputs(query_ids, response_ids, advantages, "cuda")
+        >>> outputs = prepare_model_inputs(query_token_ids, response_token_ids, advantages, "cuda")
         >>> outputs
         {
             'input_ids': tensor([
@@ -71,13 +74,13 @@ def prepare_model_inputs(
             ])
         }
     """
-    max_seq_len = max(len(q) + len(r) for q, r in zip(query_ids, response_ids))
+    max_seq_len = max(len(q) + len(r) for q, r in zip(query_token_ids, response_token_ids))
     inputs = {"input_ids": [], "attention_mask": [], "labels": [], "advantages": []}
 
     pad_token_id = 0  # Doesn't matter, will be masked
     ignore_index = -100
 
-    for query, response, advantage in zip(query_ids, response_ids, advantages):
+    for query, response, advantage in zip(query_token_ids, response_token_ids, advantages):
         combined_ids = query + response
         seq_len = len(combined_ids)
 
@@ -195,3 +198,70 @@ def find_free_port():
         port = s.getsockname()[1]
     return port
 
+def evaluate_on_test_set(
+    inference_engine: sglang.Engine,
+    test_dataset: Dataset,
+    tokenizer: AutoTokenizer,
+    eos_token: str,
+    eval_sampling_params: Dict[str, Any],
+    reward_func: Callable[[str, Dict[str, Any]], Tuple[float, Dict[str, float]]],
+) -> Dict[str, List[float]]:
+    """
+    Evaluate the model on a test dataset by generating responses and computing rewards.
+
+    Args:
+        inference_engine: The sglang Engine instance used for text generation
+        test_dataset: Dataset containing test samples
+        tokenizer: Tokenizer for decoding generated token IDs
+        eos_token: End of sequence token string
+        eval_sampling_params: Dictionary of parameters for controlling the generation process
+        reward_func: Function that computes rewards for generated responses. Takes a response
+            string and sample dict as input, returns a tuple of (overall_reward, reward_components)
+
+    Returns:
+        Dictionary containing evaluation statistics:
+            - response_lengths: List of token counts for each generated response
+            - rewards: List of overall reward values for each response
+            - non_stop_rate: List of booleans indicating if generation ended for non-stop reason
+            - reward_metrics/*: Lists of individual reward component values, prefixed with
+              "reward_metrics/"
+
+    Example:
+        >>> metrics = evaluate_on_test_set(
+        ...     inference_engine=engine,
+        ...     test_dataset=dataset,
+        ...     tokenizer=tokenizer,
+        ...     eos_token="</s>",
+        ...     eval_sampling_params={"temperature": 0.7, "max_tokens": 100},
+        ...     reward_func=compute_rewards
+        ... )
+        >>> print(f"Average reward: {metrics['rewards']:.3f}")
+    """
+    generations = inference_engine.generate(
+        input_ids=test_dataset["input_ids"], sampling_params=eval_sampling_params
+    )
+
+    metrics = {
+        "response_lengths": [],
+        "rewards": [],
+        "non_stop_rate": [],
+    }
+
+    for i, sample in enumerate(test_dataset):
+        response_token_ids = generations[i]["token_ids"]
+        finish_reason = generations[i]["meta_info"]["finish_reason"]["type"]
+
+        response = tokenizer.decode(response_token_ids, skip_special_tokens=False)
+        response = response.rstrip(eos_token)
+
+        reward, reward_components = reward_func(response, sample)
+
+        metrics["rewards"].append(reward)
+        metrics["non_stop_rate"].append(finish_reason != "stop")
+        metrics["response_lengths"].append(len(response_token_ids))
+        for k, v in reward_components.items():
+            metrics.setdefault(f"reward_metrics/{k}", []).append(v)
+
+    return {
+        k: np.mean(v) for k, v in metrics.items()
+    }
