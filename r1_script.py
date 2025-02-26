@@ -27,10 +27,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel
 import wandb
 from utils import (
     compute_token_log_probs,
+    dump_episodes,
     evaluate_on_test_set,
     find_free_port,
     prepare_model_inputs,
-    dump_episodes,
 )
 
 
@@ -394,19 +394,29 @@ def main():
     MODEL_CHAT_NAME = MODEL_NAME + "-Instruct"
 
     # RL parameters
+    # Total number of training iterations
     NUM_ITERATIONS = 1000
+    # Number of episodes to collect per iteration for training
     EPISODES_PER_ITERATION = 64
+    # Number of responses to generate for each input prompt
     GENERATIONS_PER_SAMPLE = 4
+    # Controls how much the policy can deviate from the reference model
     KL_COEFFICIENT = args.kl_coeff
 
     # Training hyperparameters
+    # Batch size for each GPU device during training
     PER_DEVICE_BATCH_SIZE = 4
+    # Learning rate for model updates
     LEARNING_RATE = 1e-6
 
     # Sampling parameters
+    # Maximum number of tokens to generate in each response
     MAX_RESPONSE_TOKENS = 1024
+    # Controls randomness in generation (higher = more random)
     TEMPERATURE = args.temperature
+    # Nucleus sampling parameter (1.0 = disabled)
     TOP_P = 1.0
+    # Top-k sampling parameter (-1 = disabled)
     TOP_K = -1  # no top k
 
     # DeepSpeed configuration

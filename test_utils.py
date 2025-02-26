@@ -200,10 +200,6 @@ def create_training_episodes_ground(
         rewards = np.array(rewards)
         advantages = (rewards - rewards.mean()) / (rewards.std() + 1e-4)
 
-        response_token_ids = [
-            (r + [EOS_TOKEN_ID]) if fr == "stop" else r
-            for r, fr in zip(response_token_ids, finish_reasons)
-        ]
         per_token_advantages = [
             [adv] * len(resp) for adv, resp in zip(advantages, response_token_ids)
         ]
