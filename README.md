@@ -1,6 +1,6 @@
 Here's your GitHub markdown with smoother phrasing while keeping it clear and concise:
 
-```markdown
+
 # Recreating R1's Aha Moment
 Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to be 10X simpler, cleaner, and faster.
 
