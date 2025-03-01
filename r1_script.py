@@ -9,20 +9,18 @@ os.environ["CUDA_HOME"] = "/cvmfs/ai.mila.quebec/apps/arch/common/cuda/12.5.1" #
 
 import argparse
 import gc
-import random
 import re
-import socket
 import time
 from typing import Any, Dict, List, Tuple, Union
 
 import deepspeed
 import numpy as np
-import sglang
 import torch
 from datasets import load_dataset
 from deepspeed import DeepSpeedEngine
 from tqdm import trange
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel
+from vllm import LLM, SamplingParams
 
 import wandb
 from utils import (
@@ -30,7 +28,9 @@ from utils import (
     dump_episodes,
     evaluate_on_test_set,
     find_free_port,
+    find_last_checkpoint,
     prepare_model_inputs,
+    load_model_into_vllm
 )
 
 
@@ -500,7 +500,7 @@ def main():
         torch_dtype=torch.bfloat16,
         device_map=0,
     )
-    policy_model.gradient_checkpointing_enable()
+    policy_model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
     # Initialize DeepSpeed engines
     policy_model, *_ = deepspeed.initialize(
@@ -516,17 +516,19 @@ def main():
     reference_model.module.cpu()
 
     ############################################
-    # Initialize SGLang (Inference) engine
+    # Initialize vLLM (Inference) engine
     ############################################
 
-    inference_engine = sglang.Engine(
-        model_path=MODEL_NAME,
-        enable_memory_saver=True,
-        skip_tokenizer_init=True,
-        mem_fraction_static=0.20,
-        schedule_policy="fcfs",
-        schedule_conservativeness=0.001,
-        max_running_requests=10000,
+    inference_engine = LLM(
+        model=MODEL_NAME,
+        skip_tokenizer_init=False,
+        gpu_memory_utilization=0.2,
+        enable_prefix_caching=True,
+        swap_space=1,
+        scheduling_policy="fcfs",
+        dtype=torch.bfloat16,
+        max_model_len=2048,
+        enable_sleep_mode=True,
     )
 
     # Wandb for logging
@@ -544,10 +546,54 @@ def main():
         },
     )
 
-    for iteration in trange(NUM_ITERATIONS):
+    # Load checkpoint if it exists
+    begin_iter = 0
+    ckpt_path, ckpt_iter = find_last_checkpoint(EXP_DIR)
+    if ckpt_path is not None:
+        print(f"Resuming from checkpoint {ckpt_path} at iteration {ckpt_iter}")
+        out = policy_model.load_checkpoint(ckpt_path / "deepspeed")
+        if out is None:
+            raise RuntimeError(f"Failed to load checkpoint {ckpt_path}")
+        begin_iter = ckpt_iter
+        load_model_into_vllm(policy_model, inference_engine)
+
+    for iteration in trange(begin_iter, NUM_ITERATIONS):
         print(f"Iteration {iteration}/{NUM_ITERATIONS}")
 
         metrics = {}
+
+        #########################################################
+        # Evaluation
+        #########################################################
+
+        eval_stats = None
+        if iteration % 25 == 0:
+            print("Evaluating on eval set...")
+            eval_episodes, eval_stats = evaluate_on_test_set(
+                inference_engine=inference_engine,
+                test_dataset=test_dataset,
+                tokenizer=tokenizer,
+                eos_token=EOS_TOKEN,
+                eval_sampling_params=SamplingParams(
+                    temperature=0.3,
+                    max_tokens=1024,
+                    n=1,
+                    detokenize=False,
+                    stop_token_ids=[EOS_TOKEN_ID],
+                ),
+                reward_func=lambda completion, sample: compute_reward(
+                    completion, sample, EOS_TOKEN
+                ),
+            )
+            eval_episode_table = dump_episodes(
+                episodes=eval_episodes,
+                episodes_stats=eval_stats,
+                exp_dir=EXP_DIR,
+                tokenizer=tokenizer,
+                iteration=iteration,
+                is_eval=True,
+            )
+            wandb.log({"eval/episodes": eval_episode_table, "iteration": iteration})
 
         #########################################################
         # Generate Episodes
@@ -558,48 +604,28 @@ def main():
         indices = np.random.choice(len(train_dataset), size=num_samples, replace=False)
         samples = train_dataset.select(indices)
 
-        # Update model weights in SGLang engine
-        gc.collect()
-        torch.cuda.empty_cache()
-        time.sleep(1)
-
         gen_time = time.time()
-
-        eval_stats = None
-        if iteration % 25 == 0:
-            print("Evaluating on test set...")
-            eval_stats = evaluate_on_test_set(
-                inference_engine=inference_engine,
-                test_dataset=test_dataset,
-                tokenizer=tokenizer,
-                eos_token=EOS_TOKEN,
-                eval_sampling_params={
-                    "temperature": 0.3,
-                    "max_new_tokens": 1024,
-                    "n": 1,
-                },
-                reward_func=lambda completion, sample: compute_reward(
-                    completion, sample, EOS_TOKEN
-                ),
-            )
-            time.sleep(2)  # so sglang scheduler cools down
 
         # Sample responses
         outputs = inference_engine.generate(
-            input_ids=samples["input_ids"],
-            sampling_params={
-                "temperature": TEMPERATURE,
-                "top_p": TOP_P,
-                "top_k": TOP_K,
-                "max_new_tokens": MAX_RESPONSE_TOKENS,
-                "n": GENERATIONS_PER_SAMPLE,
-            },
+            prompt_token_ids=samples["input_ids"],
+            sampling_params=SamplingParams(
+                n=GENERATIONS_PER_SAMPLE,
+                temperature=TEMPERATURE,
+                top_p=TOP_P,
+                top_k=TOP_K,
+                max_tokens=MAX_RESPONSE_TOKENS,
+                detokenize=False,
+                stop_token_ids=[EOS_TOKEN_ID],
+            )
         )
-        all_generations = [o["token_ids"] for o in outputs]
-        all_finish_reasons = [o["meta_info"]["finish_reason"]["type"] for o in outputs]
-        inference_engine.release_memory_occupation()
+        all_generations = [list(g.token_ids) for out in outputs for g in out.outputs]
+        all_finish_reasons = [g.finish_reason for out in outputs for g in out.outputs]
+        inference_engine.sleep(1)
 
         print(f"Generated {len(all_generations)} responses")
+        gc.collect()
+        torch.cuda.empty_cache()
         time.sleep(1)
 
         print(
@@ -699,12 +725,8 @@ def main():
         torch.cuda.empty_cache()
         time.sleep(1)
 
-        inference_engine.resume_memory_occupation()
-        success, error = inference_engine.update_weights_from_tensor(
-            list(policy_model.module.named_parameters())
-        )
-        if not success:
-            raise RuntimeError(f"Weight update failed: {error}")
+        inference_engine.wake_up()
+        load_model_into_vllm(policy_model, inference_engine)
 
         #########################################################
         # Log metrics
@@ -718,7 +740,7 @@ def main():
             **{f"train/{k}": v for k, v in train_metrics.items()},
         }
         if eval_stats is not None:
-            logs.update({f"eval/{k}": v for k, v in eval_stats.items()})
+            logs.update({f"eval/{k}": np.mean(v) for k, v in eval_stats.items()})
         wandb.log(logs)
 
         selected_keys = [
@@ -733,10 +755,14 @@ def main():
         selected_metrics = {k: logs[k] for k in selected_keys if k in logs}
         print(f"KEY METRICS: {selected_metrics}")
 
-        if (iteration + 1) % 50 == 0:
+        if iteration % 50 == 0 and iteration != 0:
             policy_model.module.save_pretrained(
-                str(EXP_DIR / "checkpoints" / f"ckpt_{iteration:06d}")
+                str(EXP_DIR / "checkpoints" / f"ckpt_{iteration:06d}" / "hf_model")
             )
+            policy_model.save_checkpoint(
+                str(EXP_DIR / "checkpoints" / f"ckpt_{iteration:06d}" / "deepspeed")
+            )
+
 
 
 if __name__ == "__main__":
