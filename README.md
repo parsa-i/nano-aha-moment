@@ -15,15 +15,15 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to b
    ```  
    Next, install torch:  
    ```bash
-   pip install torch
+   pip install torch==2.5
    ```  
-   Next, follow the installation guide on the [sglang website](https://docs.sglang.ai/start/install.html) for installing sglang. 
+   Next, follow the installation guide on the [vllm website](https://docs.vllm.ai/en/stable/getting_started/installation/gpu/index.html) for installing vllm. 
    ```bash
-   pip install "sglang[all]>=0.4.3.post2" --find-links https://flashinfer.ai/whl/cu124/torch2.5/flashinfer-python
+   pip install vllm
    ```  
    Next,
    ```bash
-   pip install transformers deepspeed jupyter wandb
+   pip install datasets deepspeed jupyter ipykernel ipywidgets wandb
    ``` 
    Next, install flash attention,
    ```bash
@@ -35,12 +35,12 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to b
 3. **Start an interactive job on the cluster**  
    Request resources using:  
    ```bash
-   salloc --partition=unkillable --gres=gpu:a100l:1 -c 6 --mem=32G -t 12:00:00
+   salloc --partition=main --gres=gpu:a100l:1 -c 6 --mem=64G -t 12:00:00
    ```  
    Then, connect via VS Code or Cursor.
 
 4. **Run the training script**  
-   Open `r1.ipynb`, set `CUDA_HOME` and `HF_HOME` as needed, and start training.
+   Open `r1_gold.ipynb`, set `CUDA_HOME` and `HF_HOME` as needed, and start training.
 
 5. **Install VS Code extensions**  
    Make sure to install the **Jupyter** and **Python** extensions in VS Code for a smoother experience.
