@@ -52,6 +52,8 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to b
     ```bash
     uv sync --extra compile
     ```  
+
+    You can run with either `uv run r1_script.py` or activate the env with `source .venv/bin/activate` and run with `python r1_script.py`
     
     
 
