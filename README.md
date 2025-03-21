@@ -36,6 +36,8 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to b
 
     **option 2: with uv**
 
+    If necessary, install `uv`, [see their website](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer)
+
     First, load the necessay cuda tools:
     ```bash
     module load cudatoolkit/12.4
