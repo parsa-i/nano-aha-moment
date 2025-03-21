@@ -10,7 +10,8 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to b
 
 2. **Install dependencies** 
 
-    a. with pip
+    **option 1: with pip**
+
     First, load the necessay cuda tools:
     ```bash
     module load cudatoolkit/12.5
@@ -33,11 +34,11 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to b
     ``` 
     You should be set.
 
-    b. or with `uv`
+    **option 2: with uv**
 
     First, load the necessay cuda tools:
     ```bash
-    module load cudatoolkit/12.5
+    module load cudatoolkit/12.4
     ```
 
     Install the environment in `.venv`
