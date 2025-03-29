@@ -1,15 +1,15 @@
 # Nano Aha! Moment: Lunch Break Reproduction of DeepSeek R1-Zero from Scratch  
 > Amirhossein Kazemnejad*, Milad Aghajohari*, Aaron Courville, Siva Reddy
 
+Implementation of R1-zero style training with:
+
 - Single 80G GPU
 - No RL Library 
 - 3B Base Model 
 - Full Parameter Tuning 
 - Efficient (less than 10h)
 
-implementation of R1-zero style training.
-
-Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](https://www.philschmid.de/mini-deepseek-r1), but designed to be **simpler**, **cleaner**, and **faster**, with every line of code visible and understandable.
+Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](https://www.philschmid.de/mini-deepseek-r1), but designed to be much **simpler**, **cleaner**, and **faster**, with every line of code visible and understandable.
 
 ## Setup Instructions
 
@@ -56,6 +56,18 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
    Make sure to install the **Jupyter** and **Python** extensions in VS Code for a smoother experience.
 
 ## File Descriptions
-- `r1_gold.ipynb` is the ground truth implementation.
-- `r1_todo.ipynb` misses some components and you need to fill those without looking at the `r1_gold.ipynb`.
-- `r1_script.py` is also just the `r1_gold` but for convenience of running with python.
+- `nano_r1.ipynb` is the interactive single file jupyter notebook with tutorial.
+- `nano_r1_script.py` is also just the `nano_r1.ipynb` but for convenience of running with python.
+
+## Citation
+If you use this codebase in your research, please cite us using:
+
+```bibtex
+@misc{Kazemnejad2025:NanoAhaMoment,
+  author       = {Amirhossein Kazemnejad and Milad Aghajohari and Aaron Courville and Siva Reddy},
+  title        = {Nano Aha! Moment: Lunch Break Reproduction of DeepSeek R1-Zero from Scratch},
+  year         = {2025},
+  howpublished = {\url{https://github.com/McGill-NLP/nano-aha-moment}},
+  note         = {GitHub repository}
+}
+```
