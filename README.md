@@ -40,20 +40,9 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
    pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.2.post1/flash_attn-2.7.2.post1+cu12torch2.5cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
    ``` 
    You should be set.
-    
 
-3. **Start an interactive job on the cluster**  
-   Request resources using:  
-   ```bash
-   salloc --partition=main --gres=gpu:a100l:1 -c 6 --mem=64G -t 12:00:00
-   ```  
-   Then, connect via VS Code or Cursor.
-
-4. **Run the training script**  
-   Open `r1_gold.ipynb`, set `CUDA_HOME` and `HF_HOME` as needed, and start training.
-
-5. **Install VS Code extensions**  
-   Make sure to install the **Jupyter** and **Python** extensions in VS Code for a smoother experience.
+3. **Run the training script**  
+   Open `nano_r1.ipynb` and start training.
 
 ## File Descriptions
 - `nano_r1.ipynb` is the interactive single file jupyter notebook with tutorial.
