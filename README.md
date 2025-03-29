@@ -1,5 +1,15 @@
-# Recreating R1's Aha Moment
-Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero), but designed to be 10X simpler, cleaner, and faster.
+# Nano Aha! Moment: Lunch Break Reproduction of DeepSeek R1-Zero from Scratch  
+> Amirhossein Kazemnejad*, Milad Aghajohari*, Aaron Courville, Siva Reddy
+
+- Single 80G GPU
+- No RL Library 
+- 3B Base Model 
+- Full Parameter Tuning 
+- Efficient (less than 10h)
+
+implementation of R1-zero style training.
+
+Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](https://www.philschmid.de/mini-deepseek-r1), but designed to be **simpler**, **cleaner**, and **faster**, with every line of code visible and understandable.
 
 ## Setup Instructions
 
