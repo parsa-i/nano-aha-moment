@@ -20,19 +20,27 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
 
 2. **Install dependencies**  
    First, make sure cuda 12.4 is installed.
-   Next, install torch:  
+   
+   Install PyTorch:
    ```bash
    pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
-   ```  
-   Next, install the rest of the dependencies:
+   ```
+   
+   Install the rest of the dependencies:
    ```bash
    pip install -r requirements.txt
-   ``` 
-   
-   You should be set.
+   ```
+
+   **Alternative Installation with uv**  
+   ```bash
+   uv sync
+   uv sync --extra compile  # Install flash-attention
+   ```
 
 3. **Run the training script**  
    Open `nano_r1.ipynb` or `nano_r1_script.py` and start training.
+
+   > If using uv, you can run with either `uv run r1_script.py` or activate the env with `source .venv/bin/activate` and run with `python nano_r1_script.py`
 
 ## File Descriptions
 - `nano_r1.ipynb` is the interactive single file jupyter notebook with tutorial.
