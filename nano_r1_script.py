@@ -28,7 +28,7 @@ from utils import (
     find_free_port,
     find_last_checkpoint,
     prepare_model_inputs,
-    load_model_into_vllm
+    load_model_into_vllm,
 )
 
 
@@ -50,12 +50,8 @@ def preprocess_example(
         },
         {"role": "assistant", "content": "Let me solve this step by step.\n<think>"},
     ]
-    input_ids = tokenizer.apply_chat_template(
-        prefix, tokenize=True, continue_final_message=True
-    )
-    prompt = tokenizer.decode(
-        input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
-    )
+    input_ids = tokenizer.apply_chat_template(prefix, tokenize=True, continue_final_message=True)
+    prompt = tokenizer.decode(input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)
     return {"prompt": prompt, "input_ids": input_ids}
 
 
@@ -155,16 +151,12 @@ def equation_reward_func(completion: str, nums: List[int], target: int) -> float
         return 0.0
 
 
-def compute_reward(
-    completion: str, sample: Dict[str, Any], EOS_TOKEN: str
-) -> Tuple[float, Dict[str, float]]:
+def compute_reward(completion: str, sample: Dict[str, Any], EOS_TOKEN: str) -> Tuple[float, Dict[str, float]]:
     nums = sample["nums"]
     target = sample["target"]
 
     format_reward = format_reward_func(completion, EOS_TOKEN)
-    equation_reward = equation_reward_func(
-        completion=completion, nums=nums, target=target
-    )
+    equation_reward = equation_reward_func(completion=completion, nums=nums, target=target)
 
     reward = format_reward + equation_reward
 
@@ -230,8 +222,7 @@ def create_training_episodes(
 
     # Process responses and calculate rewards
     groups = [
-        list(range(i, i + GENERATIONS_PER_SAMPLE))
-        for i in range(0, len(all_generations), GENERATIONS_PER_SAMPLE)
+        list(range(i, i + GENERATIONS_PER_SAMPLE)) for i in range(0, len(all_generations), GENERATIONS_PER_SAMPLE)
     ]  # example: [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
 
     all_query_token_ids, all_responses_token_ids, all_advantages = [], [], []
@@ -245,20 +236,14 @@ def create_training_episodes(
     for sample, group_indices in zip(samples, groups):
         response_token_ids = [all_generations[i] for i in group_indices]
         finish_reasons = [all_finish_reasons[i] for i in group_indices]
-        responses = tokenizer.batch_decode(
-            response_token_ids, skip_special_tokens=False
-        )
-        rewards_and_metrics = [
-            compute_reward(resp, sample, EOS_TOKEN) for resp in responses
-        ]
+        responses = tokenizer.batch_decode(response_token_ids, skip_special_tokens=False)
+        rewards_and_metrics = [compute_reward(resp, sample, EOS_TOKEN) for resp in responses]
         rewards, reward_metrics = zip(*rewards_and_metrics)
 
         rewards = np.array(rewards)
         advantages = (rewards - rewards.mean()) / (rewards.std() + 1e-4)
 
-        per_token_advantages = [
-            [adv] * len(resp) for adv, resp in zip(advantages, response_token_ids)
-        ]
+        per_token_advantages = [[adv] * len(resp) for adv, resp in zip(advantages, response_token_ids)]
 
         all_query_token_ids.extend([sample["input_ids"]] * GENERATIONS_PER_SAMPLE)
         all_responses_token_ids.extend(response_token_ids)
@@ -328,17 +313,11 @@ def compute_pg_loss(
     labels_mask = (labels[..., 1:] != -100).float()  # [batch_size, seq_len-1]
 
     with torch.no_grad():
-        ref_logps = compute_token_log_probs(
-            reference_model, model_inputs, TEMPERATURE
-        )  # [batch_size, seq_len-1]
+        ref_logps = compute_token_log_probs(reference_model, model_inputs, TEMPERATURE)  # [batch_size, seq_len-1]
 
-    logps = compute_token_log_probs(
-        policy_model, model_inputs, TEMPERATURE
-    )  # [batch_size, seq_len-1]
+    logps = compute_token_log_probs(policy_model, model_inputs, TEMPERATURE)  # [batch_size, seq_len-1]
 
-    kl_penalty = (
-        torch.exp(ref_logps - logps) - (ref_logps - logps) - 1
-    )  # [batch_size, seq_len-1]
+    kl_penalty = torch.exp(ref_logps - logps) - (ref_logps - logps) - 1  # [batch_size, seq_len-1]
     kl_penalty = kl_penalty * labels_mask  # [batch_size, seq_len-1]
 
     entropy = -logps.sum() / labels_mask.sum()  # scalar
@@ -346,9 +325,7 @@ def compute_pg_loss(
     policy_loss = -logps * advantages[..., 1:]  # [batch_size, seq_len-1]
     policy_loss = policy_loss * labels_mask  # [batch_size, seq_len-1]
 
-    loss = (
-        policy_loss + KL_COEFFICIENT * kl_penalty
-    ).sum() / total_response_len  # scalar
+    loss = (policy_loss + KL_COEFFICIENT * kl_penalty).sum() / total_response_len  # scalar
 
     metrics = {
         "policy_loss": policy_loss.sum().item() / total_response_len,
@@ -362,18 +339,10 @@ def compute_pg_loss(
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Train R1 model with PPO")
-    parser.add_argument(
-        "--kl_coeff", type=float, default=0.001, help="KL coefficient for PPO"
-    )
-    parser.add_argument(
-        "--temperature", type=float, default=1.0, help="Temperature for sampling"
-    )
-    parser.add_argument(
-        "--model_name", type=str, default="Qwen/Qwen2.5-3B", help="Model name/path"
-    )
-    parser.add_argument(
-        "--learning_rate", type=float, default=1e-6, help="Learning rate for training"
-    )
+    parser.add_argument("--kl_coeff", type=float, default=0.001, help="KL coefficient for PPO")
+    parser.add_argument("--temperature", type=float, default=1.0, help="Temperature for sampling")
+    parser.add_argument("--model_name", type=str, default="Qwen/Qwen2.5-3B", help="Model name/path")
+    parser.add_argument("--learning_rate", type=float, default=1e-6, help="Learning rate for training")
     args = parser.parse_args()
 
     # Needed to stop DeepSpeed from complaining
@@ -444,9 +413,7 @@ def main():
     }
 
     model_name_short = MODEL_NAME.split("/")[-1]
-    RUN_NAME = (
-        f"{model_name_short}_temp{TEMPERATURE}_kl{KL_COEFFICIENT}_lr{LEARNING_RATE}"
-    )
+    RUN_NAME = f"{model_name_short}_temp{TEMPERATURE}_kl{KL_COEFFICIENT}_lr{LEARNING_RATE}"
     EXP_DIR = SCRATCH / "deepseek_hackathon" / RUN_NAME
     EXP_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -587,9 +554,7 @@ def main():
                     detokenize=False,
                     stop_token_ids=[EOS_TOKEN_ID],
                 ),
-                reward_func=lambda completion, sample: compute_reward(
-                    completion, sample, EOS_TOKEN
-                ),
+                reward_func=lambda completion, sample: compute_reward(completion, sample, EOS_TOKEN),
             )
             eval_episode_table = dump_episodes(
                 episodes=eval_episodes,
@@ -623,7 +588,7 @@ def main():
                 max_tokens=MAX_RESPONSE_TOKENS,
                 detokenize=False,
                 stop_token_ids=[EOS_TOKEN_ID],
-            )
+            ),
         )
         all_generations = [list(g.token_ids) for out in outputs for g in out.outputs]
         all_finish_reasons = [g.finish_reason for out in outputs for g in out.outputs]
@@ -634,9 +599,7 @@ def main():
         torch.cuda.empty_cache()
         time.sleep(1)
 
-        print(
-            f"Time taken to generate {len(all_generations)} responses: {time.time() - gen_time} seconds"
-        )
+        print(f"Time taken to generate {len(all_generations)} responses: {time.time() - gen_time} seconds")
 
         # Process responses and calculate rewards
         episodes, episodes_stats = create_training_episodes(
@@ -686,9 +649,7 @@ def main():
             PER_DEVICE_BATCH_SIZE,
             desc="Gradient Accumulation",
         ):
-            batch = {
-                k: v[i : i + PER_DEVICE_BATCH_SIZE] for k, v in model_inputs.items()
-            }
+            batch = {k: v[i : i + PER_DEVICE_BATCH_SIZE] for k, v in model_inputs.items()}
 
             # Compute policy gradient loss
             loss, loss_metrics = compute_pg_loss(
@@ -707,9 +668,7 @@ def main():
                 grad_norm = grad_norm.item()
             metrics.setdefault("grad_norm", []).append(grad_norm)
             for k, v in loss_metrics.items():
-                metrics.setdefault(k, []).append(
-                    v.item() if isinstance(v, torch.Tensor) else v
-                )
+                metrics.setdefault(k, []).append(v.item() if isinstance(v, torch.Tensor) else v)
 
             # Backpropagation and optimization step
             policy_model.backward(loss, scale_wrt_gas=False)
@@ -762,13 +721,8 @@ def main():
         print(f"KEY METRICS: {selected_metrics}")
 
         if iteration % 50 == 0 and iteration != 0:
-            policy_model.module.save_pretrained(
-                str(EXP_DIR / "checkpoints" / f"ckpt_{iteration:06d}" / "hf_model")
-            )
-            policy_model.save_checkpoint(
-                str(EXP_DIR / "checkpoints" / f"ckpt_{iteration:06d}" / "deepspeed")
-            )
-
+            policy_model.module.save_pretrained(str(EXP_DIR / "checkpoints" / f"ckpt_{iteration:06d}" / "hf_model"))
+            policy_model.save_checkpoint(str(EXP_DIR / "checkpoints" / f"ckpt_{iteration:06d}" / "deepspeed"))
 
 
 if __name__ == "__main__":
