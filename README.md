@@ -32,14 +32,7 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
    ```
 
    **Alternative Installation with uv**  
-   If you prefer using `uv`:
    ```bash
-   # Install uv (see https://docs.astral.sh/uv/getting-started/installation/#standalone-installer)
-   
-   # Load cuda tools
-   module load cudatoolkit/12.4
-   
-   # Install dependencies
    uv sync
    uv sync --extra compile  # Install flash-attention
    ```
