@@ -19,30 +19,20 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
    ```
 
 2. **Install dependencies**  
-   First, load the necessay cuda tools:
-   ```bash
-   module load cudatoolkit/12.5
-   ```  
+   First, make sure cuda 12.4 is installed.
    Next, install torch:  
    ```bash
-   pip install torch==2.5
+   pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
    ```  
-   Next, follow the installation guide on the [vllm website](https://docs.vllm.ai/en/stable/getting_started/installation/gpu/index.html) for installing vllm. 
+   Next, install the rest of the dependencies:
    ```bash
-   pip install vllm
-   ```  
-   Next,
-   ```bash
-   pip install datasets deepspeed jupyter ipykernel ipywidgets wandb
+   pip install -r requirements.txt
    ``` 
-   Next, install flash attention,
-   ```bash
-   pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.2.post1/flash_attn-2.7.2.post1+cu12torch2.5cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
-   ``` 
+   
    You should be set.
 
 3. **Run the training script**  
-   Open `nano_r1.ipynb` and start training.
+   Open `nano_r1.ipynb` or `nano_r1_script.py` and start training.
 
 ## File Descriptions
 - `nano_r1.ipynb` is the interactive single file jupyter notebook with tutorial.
