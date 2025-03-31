@@ -456,8 +456,16 @@ def main():
     # Prompts and Dataset
     ############################################
 
-    SYSTEM_MESSAGE = "You are a helpful assistant. You first thinks about the reasoning process in the mind and then provides the user with the answer."
-    PROMPT_TEMPLATE = "Using the numbers {numbers}, create an equation that equals {target}. You can use basic arithmetic operations (+, -, *, /) and each number can only be used once. Show your work in <think> </think> tags. And return the final equation and answer in <answer> </answer> tags, for example <answer>(1 + 2) / (3 * 5)</answer>."
+    SYSTEM_MESSAGE = (
+        "You are a helpful assistant. You first think about the reasoning process in the mind "
+        "and then provide the user with the answer."
+    )
+    PROMPT_TEMPLATE = (
+        "Using the numbers {numbers}, create an equation that equals {target}. "
+        "You can use basic arithmetic operations (+, -, *, /) and each number can only be used once. "
+        "Show your work in <think> </think> tags. And return the final equation and answer in "
+        "<answer> </answer> tags, for example <answer>(1 + 2) / (3 * 5)</answer>."
+    )
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_CHAT_NAME)
     EOS_TOKEN_ID = AutoTokenizer.from_pretrained(MODEL_NAME).eos_token_id
@@ -552,7 +560,7 @@ def main():
         out = policy_model.load_checkpoint(ckpt_path / "deepspeed")
         if out is None:
             raise RuntimeError(f"Failed to load checkpoint {ckpt_path}")
-        begin_iter = ckpt_iter
+        begin_iter = ckpt_iter + 1
         load_model_into_vllm(policy_model, inference_engine)
 
     for iteration in trange(begin_iter, NUM_ITERATIONS):
