@@ -16,6 +16,10 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
 - [Let's Reproduce DeepSeek R1-Zero from Scratch with 1 GPU - Part 1](https://youtu.be/ZMO5tv30ri8)
 - [Let's Reproduce DeepSeek R1-Zero from Scratch with 1 GPU - Part 2](https://youtu.be/dxhCyhc_bcQ)
 
+## File Descriptions
+- `nano_r1.ipynb` is the interactive single file jupyter notebook with tutorial.
+- `nano_r1_script.py` is also just the `nano_r1.ipynb` but for convenience of running with python.
+
 ## Setup Instructions
 
 1. **Clone the repository**  
@@ -46,10 +50,6 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
    Open `nano_r1.ipynb` or `nano_r1_script.py` and start training.
 
    > If using uv, you can run with either `uv run r1_script.py` or activate the env with `source .venv/bin/activate` and run with `python nano_r1_script.py`
-
-## File Descriptions
-- `nano_r1.ipynb` is the interactive single file jupyter notebook with tutorial.
-- `nano_r1_script.py` is also just the `nano_r1.ipynb` but for convenience of running with python.
 
 ## Citation
 If you use this codebase in your research, please cite us using:
