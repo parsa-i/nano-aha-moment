@@ -11,6 +11,11 @@ Implementation of R1-zero style training with:
 
 Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](https://www.philschmid.de/mini-deepseek-r1), but designed to be much **simpler**, **cleaner**, and **faster**, with every line of code visible and understandable.
 
+## Spelled Lecture on YouTube
+
+- [Let's Reproduce DeepSeek R1-Zero from Scratch with 1 GPU - Part 1](https://youtu.be/ZMO5tv30ri8)
+- [Let's Reproduce DeepSeek R1-Zero from Scratch with 1 GPU - Part 2](https://youtu.be/ZMO5tv30ri8)
+
 ## Setup Instructions
 
 1. **Clone the repository**  
