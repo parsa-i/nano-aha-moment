@@ -36,7 +36,7 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
    pip install -r requirements.txt
    ```
 
-   **Alternative Installation with uv**  
+   **Alternative Installation with uv (Optional)**  
    ```bash
    uv sync
    uv sync --extra compile  # Install flash-attention
