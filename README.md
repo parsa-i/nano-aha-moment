@@ -19,7 +19,7 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
 ## File Descriptions
 - `nano_r1.ipynb` is the interactive single file jupyter notebook with tutorial.
 - `nano_r1_script.py` is also just the `nano_r1.ipynb` but for convenience of running with python.
-- [🤗 McGill-NLP/nano-aha-moment-3b](https://huggingface.co/McGill-NLP/nano-aha-moment-3b): The HF model trained using the above script.
+- [🤗 McGill-NLP/nano-aha-moment-3b](https://huggingface.co/McGill-NLP/nano-aha-moment-3b): The HF model trained using the above script (About 60\% on CountDown Task)
 
 ## Setup Instructions
 
@@ -51,6 +51,9 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
    Open `nano_r1.ipynb` or `nano_r1_script.py` and start training.
 
    > If using uv, you can run with either `uv run r1_script.py` or activate the env with `source .venv/bin/activate` and run with `python nano_r1_script.py`
+
+## Todos
+- [ ] Full evaluation suite
 
 ## Citation
 If you use this codebase in your research, please cite us using:
