@@ -19,6 +19,7 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
 ## File Descriptions
 - `nano_r1.ipynb` is the interactive single file jupyter notebook with tutorial.
 - `nano_r1_script.py` is also just the `nano_r1.ipynb` but for convenience of running with python.
+- [🤗 McGill-NLP/nano-aha-moment-3b](https://huggingface.co/McGill-NLP/nano-aha-moment-3b)
 
 ## Setup Instructions
 
