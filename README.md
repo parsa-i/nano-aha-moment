@@ -13,8 +13,8 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
 
 ## Karpathy-style Detailed Lecture on YouTube
 
-- [Let's Reproduce DeepSeek R1-Zero from Scratch with 1 GPU - Part 1](https://youtu.be/ZMO5tv30ri8)
-- [Let's Reproduce DeepSeek R1-Zero from Scratch with 1 GPU - Part 2](https://youtu.be/dxhCyhc_bcQ)
+- [nanoAhaMoment: RL for LLM from Scratch with 1 GPU - Part 1](https://youtu.be/ZMO5tv30ri8)
+- [nanoAhaMoment: RL for LLM from Scratch with 1 GPU - Part 2](https://youtu.be/dxhCyhc_bcQ)
 
 ## File Descriptions
 - `nano_r1.ipynb` is the interactive single file jupyter notebook with tutorial.
