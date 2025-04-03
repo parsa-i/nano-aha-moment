@@ -25,7 +25,7 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
 
 1. **Clone the repository**  
    ```bash
-   git clone git@github.com:McGill-NLP/nano-aha-moment.git
+   git clone https://github.com/McGill-NLP/nano-aha-moment.git
    ```
 
 2. **Install dependencies**  
@@ -50,7 +50,7 @@ Inspired by [TinyZero](https://github.com/Jiayi-Pan/TinyZero) and [Mini-R1](http
 3. **Run the training script**  
    Open `nano_r1.ipynb` or `nano_r1_script.py` and start training.
 
-   > If using uv, you can run with either `uv run r1_script.py` or activate the env with `source .venv/bin/activate` and run with `python nano_r1_script.py`
+   > If using uv, you can run with either `uv run nano_r1_script.py` or activate the env with `source .venv/bin/activate` and run with `python nano_r1_script.py`
 
 ## Todos
 - [ ] Full evaluation suite
