@@ -1,7 +1,7 @@
-# Nano Aha! Moment: Lunch Break Reproduction of DeepSeek R1-Zero from Scratch  
+# Nano Aha! Moment: Single File RL for LLM Library
 > Amirhossein Kazemnejad*, Milad Aghajohari*, Aaron Courville, Siva Reddy
 
-Implementation of R1-zero style training with:
+Implementation of DeepSeek R1-zero style training with:
 
 - Single 80G GPU
 - No RL Library 
