@@ -61,7 +61,7 @@ If you use this codebase in your research, please cite us using:
 ```bibtex
 @misc{Kazemnejad2025:NanoAhaMoment,
   author       = {Amirhossein Kazemnejad and Milad Aghajohari and Aaron Courville and Siva Reddy},
-  title        = {Nano Aha! Moment: Lunch Break Reproduction of DeepSeek R1-Zero from Scratch},
+  title        = {Nano Aha! Moment: Single File "RL for LLM" Library},
   year         = {2025},
   howpublished = {\url{https://github.com/McGill-NLP/nano-aha-moment}},
   note         = {GitHub repository}
