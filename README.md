@@ -1,5 +1,5 @@
 # nanoAhaMoment: Single File "RL for LLM" Library
-> Amirhossein Kazemnejad*, Milad Aghajohari*, Aaron Courville, Siva Reddy
+> Amirhossein Kazemnejad*, Milad Aghajohari*, Alessandro Sordoni, Aaron Courville, Siva Reddy
 
 Implementation of DeepSeek R1-zero style training with:
 
