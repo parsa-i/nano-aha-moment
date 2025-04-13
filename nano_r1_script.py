@@ -100,57 +100,6 @@ def preprocess_example(
     return {"prompt": prompt, "input_ids": input_ids, "targetz": targetz}
 
 
-def format_reward_func(completion: str, EOS_TOKEN: str) -> float:
-    """
-    Format: <think>...</think><answer>...</answer>
-
-    Also checks that the content within <answer>...</answer> conforms to a
-    specified pattern (only digits, + - * / ( ) . and whitespace).
-
-    Args:
-        completion (str): Generated output
-        EOS_TOKEN (str): End of sequence token
-
-    Returns:
-        float: Reward score
-    """
-    # Define the allowed pattern (only numbers, +, -, *, /, (, ), ., and whitespace)
-    allowed_pattern = r"^[\d+\-*/().\s]+$"
-
-    try:
-        # Synthetically prepend <think> (if your pipeline relies on that to ease matching)
-        completion = "<think>" + completion
-
-        # Strip EOS token if present
-        if completion.endswith(EOS_TOKEN):
-            completion = completion[: -len(EOS_TOKEN)]
-
-        # Check if the format is correct
-        # Pattern means:
-        # 1) <think>...contents not including other <think> tags...</think>
-        # 2) \n
-        # 3) <answer>...anything...</answer>
-        regex = r"^<think>([^<]*(?:<(?!/?think>)[^<]*)*)<\/think>\n<answer>([\s\S]*?)<\/answer>$"
-        match = re.search(regex, completion, re.DOTALL)
-
-        if match is None or len(match.groups()) != 2:
-            # Format is incorrect
-            return 0.0
-        else:
-            # Extract the content inside <answer>...</answer>
-            answer_content = match.group(2).strip()
-
-            # Check if answer content matches the allowed pattern
-            if not re.match(allowed_pattern, answer_content):
-                # If it doesn't match, reward is 0.5
-                return 0.5
-            else:
-                # If both format and pattern are correct, reward is 1
-                return 1.0
-    except Exception:
-        # Any error leads to 0 reward
-        return 0.0
-
 def soft_format_reward_func(completion, **kwargs) -> float:
     """Reward function that checks if the completion has a specific format."""
     completion = "<think>" + completion
@@ -163,7 +112,7 @@ def extract_xml_answer(text: str) -> str:
     answer = answer.split("</answer>")[0]
     return answer.strip()
     
-def equation_reward_func(completion: str, best_moves: List[int]) -> float:
+def equation_reward_func(completion: str, best_moves: List[int], legal_moves: List[int]) -> float:
     """
     Evaluates completion based on mathematical correctness of the answer
 
@@ -182,17 +131,17 @@ def equation_reward_func(completion: str, best_moves: List[int]) -> float:
         ans = extract_xml_answer(completion)
         if int(ans) in best_moves:
             return 1.0
-        else:
-            return 0.0
+        if int(ans) not in legal_moves:
+            return -1.0
     except Exception:
         # If evaluation fails, reward is 0
         return 0.0
 
 def compute_reward(completion: str, sample: Dict[str, Any], EOS_TOKEN: str) -> Tuple[float, Dict[str, float]]:
     best_moves = sample["best_move"]
-
+    legal_moves = sample["legal_moves"]
     format_reward = soft_format_reward_func(completion)
-    equation_reward = equation_reward_func(completion=completion, best_moves=best_moves)
+    equation_reward = equation_reward_func(completion=completion, best_moves=best_moves, legal_moves=legal_moves)
 
     reward = format_reward + equation_reward
 
