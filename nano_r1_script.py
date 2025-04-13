@@ -42,27 +42,62 @@ Respond in the following format, using careful step-by-step reasoning.
 </answer>
 """
 
+def get_board_state_string(moves: str) -> str:
+    # Initialize empty 6x7 board (6 rows, 7 columns)
+    board = [['.' for _ in range(7)] for _ in range(6)]
+
+    # Track how many discs are in each column
+    heights = [0] * 7
+
+    # Players: 'O' and 'X'
+    players = ['O', 'X']
+
+    for i, move_char in enumerate(moves):
+        col = int(move_char)
+        row = 5 - heights[col]  # bottom to top
+        if row < 0:
+            raise ValueError(f"Column {col} is full!")
+        board[row][col] = players[i % 2]
+        heights[col] += 1
+
+    # Determine current player
+    current_player = players[len(moves) % 2]
+
+    # Build board string
+    board_lines = [' '.join(row) for row in board]
+    board_lines.append('0 1 2 3 4 5 6')
+    board_text = '\n'.join(board_lines)
+
+    # Final formatted template
+    template = f"""You are playing Connect Four as player {current_player}.
+
+Here is the current board:
+```
+{board_text}
+```
+
+Respond with the best column number for {current_player} to drop a disc in (just the number)."""
+    return template
+
 # Load and process dataset
 def preprocess_example(
     example: Dict[str, Any],
     tokenizer: AutoTokenizer,
     SYSTEM_MESSAGE: str,
-    PROMPT_TEMPLATE: str,
 ):
-    numbers: List[int] = example["nums"]
-    target: int = example["target"]
-
+    board_state: str = example["game_sequence"]
     prefix = [
         {"role": "system", "content": SYSTEM_MESSAGE},
         {
             "role": "user",
-            "content": PROMPT_TEMPLATE.format(numbers=numbers, target=target),
+            "content": get_board_state_string(board_state),
         },
         {"role": "assistant", "content": "<think>"},
     ]
+    targetz = example["best_move"]
     input_ids = tokenizer.apply_chat_template(prefix, tokenize=True, continue_final_message=True)
     prompt = tokenizer.decode(input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)
-    return {"prompt": prompt, "input_ids": input_ids}
+    return {"prompt": prompt, "input_ids": input_ids, "targetz": targetz}
 
 
 def format_reward_func(completion: str, EOS_TOKEN: str) -> float:
@@ -159,14 +194,38 @@ def equation_reward_func(completion: str, nums: List[int], target: int) -> float
     except Exception:
         # If evaluation fails, reward is 0
         return 0.0
+    
 
+def equation_reward_func(completion: str, best_moves: List[int]) -> float:
+    """
+    Evaluates completion based on mathematical correctness of the answer
+
+    Args:
+        completion (str): Generated output
+        target (str): Expected answer
+        nums (list): Available numbers to use in the equation
+
+    Returns:
+        float: Reward score
+    """
+    try:
+        # add synthetic <think> as its already part of the prompt and prefilled for the assistant to more easily match the regex
+        completion = "<think>" + completion
+        # Check if the format is correct
+        match = re.search(r"<answer>(.*?)<\/answer>", completion)
+        if match in best_moves:
+            return 1.0
+        else:
+            return 0.0
+    except Exception:
+        # If evaluation fails, reward is 0
+        return 0.0
 
 def compute_reward(completion: str, sample: Dict[str, Any], EOS_TOKEN: str) -> Tuple[float, Dict[str, float]]:
-    nums = sample["nums"]
-    target = sample["target"]
+    best_moves = sample["best_moves"]
 
     format_reward = format_reward_func(completion, EOS_TOKEN)
-    equation_reward = equation_reward_func(completion=completion, nums=nums, target=target)
+    equation_reward = equation_reward_func(completion=completion, best_moves=best_moves)
 
     reward = format_reward + equation_reward
 
@@ -443,19 +502,18 @@ def main():
     EOS_TOKEN_ID = tokenizer.eos_token_id
     EOS_TOKEN = tokenizer.convert_ids_to_tokens(EOS_TOKEN_ID)
 
-    dataset = load_dataset("Jiayi-Pan/Countdown-Tasks-3to4", split="train")
+    dataset = load_dataset("Parsenal110/c4_optimal", split="train")
     dataset = dataset.map(
         preprocess_example,
         num_proc=6,
         fn_kwargs={
             "tokenizer": tokenizer,
             "SYSTEM_MESSAGE": SYSTEM_MESSAGE,
-            "PROMPT_TEMPLATE": PROMPT_TEMPLATE,
         },
     )
 
     # Split dataset
-    train_test_split = dataset.train_test_split(test_size=500, seed=42)
+    train_test_split = dataset.train_test_split(test_size=100, seed=42)
     train_dataset = train_test_split["train"]
     test_dataset = train_test_split["test"]
 
