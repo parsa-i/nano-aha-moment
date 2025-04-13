@@ -375,15 +375,15 @@ def main():
     # Total number of training iterations
     NUM_ITERATIONS = 1000
     # Number of episodes to collect per iteration for training
-    EPISODES_PER_ITERATION = 64
+    EPISODES_PER_ITERATION = 128
     # Number of responses to generate for each input prompt
-    GENERATIONS_PER_SAMPLE = 4
+    GENERATIONS_PER_SAMPLE = 8
     # Controls how much the policy can deviate from the reference model
     KL_COEFFICIENT = args.kl_coeff
 
     # Training hyperparameters
     # Batch size for each GPU device during training
-    PER_DEVICE_BATCH_SIZE = 4
+    PER_DEVICE_BATCH_SIZE = 8
     # Learning rate for model updates
     LEARNING_RATE = 1e-6
 
@@ -500,7 +500,7 @@ def main():
     inference_engine = LLM(
         model=MODEL_NAME,
         skip_tokenizer_init=False,
-        gpu_memory_utilization=0.2,
+        gpu_memory_utilization=0.3,
         enable_prefix_caching=True,
         swap_space=1,
         scheduling_policy="fcfs",
