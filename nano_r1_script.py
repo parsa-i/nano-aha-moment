@@ -151,51 +151,18 @@ def format_reward_func(completion: str, EOS_TOKEN: str) -> float:
         # Any error leads to 0 reward
         return 0.0
 
-
-def equation_reward_func(completion: str, nums: List[int], target: int) -> float:
-    """
-    Evaluates completion based on mathematical correctness of the answer
-
-    Args:
-        completion (str): Generated output
-        target (str): Expected answer
-        nums (list): Available numbers to use in the equation
-
-    Returns:
-        float: Reward score
-    """
-    try:
-        # add synthetic <think> as its already part of the prompt and prefilled for the assistant to more easily match the regex
-        completion = "<think>" + completion
-        # Check if the format is correct
-        match = re.search(r"<answer>(.*?)<\/answer>", completion)
-        if match is None:
-            return 0.0
-        # Extract the "answer" part from the completion
-        equation = match.group(1).strip()
-        # Extract all numbers from the equation
-        used_numbers = [int(n) for n in re.findall(r"\d+", equation)]
-
-        # Check if all numbers are used exactly once
-        if sorted(used_numbers) != sorted(nums):
-            return 0.0
-        # Define a regex pattern that only allows numbers, operators, parentheses, and whitespace
-        allowed_pattern = r"^[\d+\-*/().\s]+$"
-        if not re.match(allowed_pattern, equation):
-            return 0.0
-
-        # Evaluate the equation with restricted globals and locals
-        result = eval(equation, {"__builtins__": None}, {})
-        # Check if the equation is correct and matches the ground truth
-        if abs(float(result) - float(target)) < 1e-5:
-            return 1.0
-        else:
-            return 0.0
-    except Exception:
-        # If evaluation fails, reward is 0
-        return 0.0
+def soft_format_reward_func(completion, **kwargs) -> float:
+    """Reward function that checks if the completion has a specific format."""
+    completion = "<think>" + completion
+    pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
+    if re.search(pattern, completion, flags=re.DOTALL):
+        return 0.1
+    return 0.0
+def extract_xml_answer(text: str) -> str:
+    answer = text.split("<answer>")[-1]
+    answer = answer.split("</answer>")[0]
+    return answer.strip()
     
-
 def equation_reward_func(completion: str, best_moves: List[int]) -> float:
     """
     Evaluates completion based on mathematical correctness of the answer
@@ -212,8 +179,8 @@ def equation_reward_func(completion: str, best_moves: List[int]) -> float:
         # add synthetic <think> as its already part of the prompt and prefilled for the assistant to more easily match the regex
         completion = "<think>" + completion
         # Check if the format is correct
-        match = re.search(r"<answer>(.*?)<\/answer>", completion)
-        if match in best_moves:
+        ans = extract_xml_answer(completion)
+        if int(ans) in best_moves:
             return 1.0
         else:
             return 0.0
@@ -222,9 +189,9 @@ def equation_reward_func(completion: str, best_moves: List[int]) -> float:
         return 0.0
 
 def compute_reward(completion: str, sample: Dict[str, Any], EOS_TOKEN: str) -> Tuple[float, Dict[str, float]]:
-    best_moves = sample["best_moves"]
+    best_moves = sample["best_move"]
 
-    format_reward = format_reward_func(completion, EOS_TOKEN)
+    format_reward = soft_format_reward_func(completion)
     equation_reward = equation_reward_func(completion=completion, best_moves=best_moves)
 
     reward = format_reward + equation_reward
