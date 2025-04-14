@@ -49,7 +49,7 @@ def get_board_state_string(moves: str) -> str:
     # Track how many discs are in each column
     heights = [0] * 7
 
-    # Players: 'O' and 'X'
+    # Players: 'X' and 'O'
     players = ['O', 'X']
 
     for i, move_char in enumerate(moves):
@@ -60,13 +60,15 @@ def get_board_state_string(moves: str) -> str:
         board[row][col] = players[i % 2]
         heights[col] += 1
 
-    # Determine current player
-    current_player = players[len(moves) % 2]
+    # Print board
+    print("  1 2 3 4 5 6 7")
+    for idx, row in enumerate(board):
+        line = chr(ord('A') + idx) + ' ' + ' '.join(row)
+        print(line)
 
-    # Build board string
-    board_lines = [' '.join(row) for row in board]
-    board_lines.append('0 1 2 3 4 5 6')
-    board_text = '\n'.join(board_lines)
+    # Print whose move it is
+    next_player = players[len(moves) % 2]
+    print(f"\n{next_player}'s move >")
 
     # Final formatted template
     template = f"""You are playing Connect Four as player {current_player}.
@@ -107,6 +109,7 @@ def soft_format_reward_func(completion, **kwargs) -> float:
     if re.search(pattern, completion, flags=re.DOTALL):
         return 0.1
     return 0.0
+
 def extract_xml_answer(text: str) -> str:
     answer = text.split("<answer>")[-1]
     answer = answer.split("</answer>")[0]
@@ -114,28 +117,33 @@ def extract_xml_answer(text: str) -> str:
     
 def equation_reward_func(completion: str, best_moves: List[int], legal_moves: List[int]) -> float:
     """
-    Evaluates completion based on mathematical correctness of the answer
-
-    Args:
-        completion (str): Generated output
-        target (str): Expected answer
-        nums (list): Available numbers to use in the equation
-
-    Returns:
-        float: Reward score
+    Evaluates the model's completion based on whether the extracted answer is valid and correct.
+    Logs issues for debugging if evaluation fails.
     """
     try:
-        # add synthetic <think> as its already part of the prompt and prefilled for the assistant to more easily match the regex
+        # Add synthetic <think> so regex works
         completion = "<think>" + completion
-        # Check if the format is correct
         ans = extract_xml_answer(completion)
-        if int(ans) in best_moves:
+
+        # Try converting to int
+        ans_int = int(ans) - 1 # Should change the dataset format.
+
+        if ans_int in best_moves:
             return 1.0
-        if int(ans) not in legal_moves:
-            return -1.0
-    except Exception:
-        # If evaluation fails, reward is 0
+        if ans_int in legal_moves:
+            return 0.2
+        return 0.0  # legal but suboptimal move
+
+    except ValueError:
+        print(f"[ERROR] Could not convert extracted answer to int: '{ans}' from completion: {completion}")
         return 0.0
+    except IndexError:
+        print(f"[ERROR] Failed to extract <answer> tags from completion: {completion}")
+        return 0.0
+    except Exception as e:
+        print(f"[ERROR] Unexpected error while evaluating completion: {completion}\nError: {e}")
+        return 0.0
+
 
 def compute_reward(completion: str, sample: Dict[str, Any], EOS_TOKEN: str) -> Tuple[float, Dict[str, float]]:
     best_moves = sample["best_move"]
