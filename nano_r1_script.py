@@ -19,6 +19,7 @@ from deepspeed import DeepSpeedEngine
 from tqdm import trange
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel
 from vllm import LLM, SamplingParams
+from typing import List
 
 import wandb
 from utils import (
@@ -61,14 +62,13 @@ def get_board_state_string(moves: str) -> str:
         heights[col] += 1
 
     # Print board
-    print("  1 2 3 4 5 6 7")
+    board_lines = ["  1 2 3 4 5 6 7\n"]
     for idx, row in enumerate(board):
-        line = chr(ord('A') + idx) + ' ' + ' '.join(row)
-        print(line)
+        board_lines.append(chr(ord('A') + idx) + ' ' + ' '.join(row) + "\n")
 
+    board_text = '\n'.join(board_lines)
     # Print whose move it is
-    next_player = players[len(moves) % 2]
-    print(f"\n{next_player}'s move >")
+    current_player = players[len(moves) % 2]
 
     # Final formatted template
     template = f"""You are playing Connect Four as player {current_player}.
@@ -96,10 +96,9 @@ def preprocess_example(
         },
         {"role": "assistant", "content": "<think>"},
     ]
-    targetz = example["best_move"]
     input_ids = tokenizer.apply_chat_template(prefix, tokenize=True, continue_final_message=True)
     prompt = tokenizer.decode(input_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)
-    return {"prompt": prompt, "input_ids": input_ids, "targetz": targetz}
+    return {"prompt": prompt, "input_ids": input_ids}
 
 
 def soft_format_reward_func(completion, **kwargs) -> float:
@@ -115,47 +114,52 @@ def extract_xml_answer(text: str) -> str:
     answer = answer.split("</answer>")[0]
     return answer.strip()
     
-def equation_reward_func(completion: str, best_moves: List[int], legal_moves: List[int]) -> float:
+
+def c4_reward_func(completion: str, next_move: List[float]) -> float:
     """
-    Evaluates the model's completion based on whether the extracted answer is valid and correct.
-    Logs issues for debugging if evaluation fails.
+    Evaluates the reward for a model's move in Connect Four.
+
+    Args:
+        completion (str): The model's output string containing the move in XML format.
+        next_moves (List[float]): A list of values corresponding to each column (1 to 7) on the board.
+
+    Returns:
+        float: The reward value for the chosen move. Returns -1.0 if the move is invalid.
     """
     try:
-        # Add synthetic <think> so regex works
-        completion = "<think>" + completion
-        ans = extract_xml_answer(completion)
+        move = int(extract_xml_answer(completion))  # model's move, expected to be between 1 and 7
+        if 1 <= move <= 7:
+            return next_move[move - 1]  # zero-based index
+        else:
+            return -1.0  # Invalid move (out of range)
+    except (ValueError, IndexError, TypeError):
+        return -1.0  # Handle invalid extraction or non-integer result
 
-        # Try converting to int
-        ans_int = int(ans) - 1 # Should change the dataset format.
-
-        if ans_int in best_moves:
-            return 1.0
-        if ans_int in legal_moves:
-            return 0.2
-        return 0.0  # legal but suboptimal move
-
-    except ValueError:
-        print(f"[ERROR] Could not convert extracted answer to int: '{ans}' from completion: {completion}")
-        return 0.0
-    except IndexError:
-        print(f"[ERROR] Failed to extract <answer> tags from completion: {completion}")
-        return 0.0
-    except Exception as e:
-        print(f"[ERROR] Unexpected error while evaluating completion: {completion}\nError: {e}")
-        return 0.0
 
 
 def compute_reward(completion: str, sample: Dict[str, Any], EOS_TOKEN: str) -> Tuple[float, Dict[str, float]]:
-    best_moves = sample["best_move"]
-    legal_moves = sample["legal_moves"]
+
+    next_move = sample["next_move"]
     format_reward = soft_format_reward_func(completion)
-    equation_reward = equation_reward_func(completion=completion, best_moves=best_moves, legal_moves=legal_moves)
+    equation_reward = c4_reward_func(completion=completion, next_move=next_move)
 
     reward = format_reward + equation_reward
+
+    # Categorize the move based on equation_reward
+    is_optimal = 1.0 if equation_reward == 1.0 else 0.0
+    is_good = 1.0 if 0.5 < equation_reward < 1.0 else 0.0
+    is_poor = 1.0 if 0.0 < equation_reward <= 0.5 else 0.0
+    is_zero = 1.0 if equation_reward == 0.0 else 0.0
+    is_illegal = 1.0 if equation_reward == -1.0 else 0.0
 
     metrics = {
         "format_reward": format_reward,
         "equation_reward": equation_reward,
+        "is_optimal_move": is_optimal,
+        "is_good_move": is_good,
+        "is_poor_move": is_poor,
+        "is_zero_move": is_zero,
+        "is_illegal_move": is_illegal,
     }
 
     return reward, metrics
@@ -352,7 +356,6 @@ def main():
 
     # Model configuration
     MODEL_NAME = args.model_name
-    MODEL_CHAT_NAME = MODEL_NAME + "-Instruct"
 
     # RL parameters
     # Total number of training iterations
@@ -416,11 +419,6 @@ def main():
     ############################################
     # Prompts and Dataset
     ############################################
-    PROMPT_TEMPLATE = (
-        "Using the numbers {numbers}, create an equation that equals {target}. "
-        "You can use basic arithmetic operations (+, -, *, /) and each number can only be used once. "
-        "Return the final equation only."
-    )
     tokenizer_name = args.tokenizer_name if args.tokenizer_name is not None else MODEL_NAME
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     EOS_TOKEN_ID = tokenizer.eos_token_id
