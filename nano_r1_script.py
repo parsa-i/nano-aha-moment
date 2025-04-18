@@ -78,7 +78,7 @@ Here is the current board:
 {board_text}
 ```
 
-Respond with the best valid column for {current_player} to drop a disc in (just the number)."""
+What is the best valid column for {current_player} to drop a disc in (just the number)."""
     return template
 
 # Load and process dataset
@@ -426,6 +426,7 @@ def main():
 
     
     dataset = load_dataset("Parsenal110/c4_optimal", split="train")
+    dataset = (ex for ex in dataset if ex["stage"] in ["midgame", "endgame"])
     dataset = dataset.map(
         preprocess_example,
         num_proc=6,
