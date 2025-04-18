@@ -401,6 +401,14 @@ def main():
                 "torch_adam": True,
             },
         },
+        "scheduler": {
+        "type": "WarmupLR",
+        "params": {
+            "warmup_min_lr": 0,
+            "warmup_max_lr": args.learning_rate,
+            "warmup_num_steps": 10
+        }
+    },
     }
     ref_deepspeed_config = {
         "bf16": {"enabled": True},
