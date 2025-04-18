@@ -78,7 +78,7 @@ Here is the current board:
 {board_text}
 ```
 
-Respond with the best column number for {current_player} to drop a disc in (just the number)."""
+Respond with the best valid column for {current_player} to drop a disc in (just the number)."""
     return template
 
 # Load and process dataset
@@ -423,35 +423,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     EOS_TOKEN_ID = tokenizer.eos_token_id
     EOS_TOKEN = tokenizer.convert_ids_to_tokens(EOS_TOKEN_ID)
-    # 1. Load the raw “train” split once
-    raw = load_dataset("Parsenal110/c4_optimal", split="train")
 
-
-    # 2. Partition by `stage` so train≠opening, eval=opening
-    train_raw = raw.filter(lambda ex: ex["stage"] != "opening")
-    eval_raw  = raw.filter(lambda ex: ex["stage"] == "opening")
-
-    # 3. Preprocess each subset
-    train_dataset = train_raw.map(
-        preprocess_example,
-        num_proc=6,
-        fn_kwargs={
-            "tokenizer": tokenizer,
-            "SYSTEM_MESSAGE": SYSTEM_MESSAGE,
-        },
-    )
-
-    eval_dataset = eval_raw.map(
-        preprocess_example,
-        num_proc=6,
-        fn_kwargs={
-            "tokenizer": tokenizer,
-            "SYSTEM_MESSAGE": SYSTEM_MESSAGE,
-        },
-    )
-
-    print(f"Train dataset size: {len(train_dataset)}")  # all non‑opening
-    print(f"Eval  dataset size: {len(eval_dataset)}")   # only opening
     
     dataset = load_dataset("Parsenal110/c4_optimal", split="train")
     dataset = dataset.map(
