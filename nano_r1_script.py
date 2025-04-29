@@ -38,48 +38,10 @@ Respond in the following format, using careful step-by-step reasoning.
 <think>
 ...
 </think>
-<answer>
+<response>
 ...
-</answer>
+</response>
 """
-
-def get_board_state_string(moves: str) -> str:
-    # Initialize empty 6x7 board (6 rows, 7 columns)
-    board = [['.' for _ in range(7)] for _ in range(6)]
-
-    # Track how many discs are in each column
-    heights = [0] * 7
-
-    # Players: 'X' and 'O'
-    players = ['O', 'X']
-
-    for i, move_char in enumerate(moves):
-        col = int(move_char)
-        row = 5 - heights[col]  # bottom to top
-        if row < 0:
-            raise ValueError(f"Column {col} is full!")
-        board[row][col] = players[i % 2]
-        heights[col] += 1
-
-    # Print board
-    board_lines = ["  1 2 3 4 5 6 7"]
-    for idx, row in enumerate(board):
-        board_lines.append(chr(ord('A') + idx) + ' ' + ' '.join(row))
-
-    board_text = '\n'.join(board_lines)
-    # Print whose move it is
-    current_player = players[len(moves) % 2]
-
-    # Final formatted template
-    template = f"""You are playing Connect Four as player {current_player}.
-
-Here is the current board:
-```
-{board_text}
-```
-
-What is the best valid column for {current_player} to drop a disc in (just the number)."""
-    return template
 
 # Load and process dataset
 def preprocess_example(
@@ -87,12 +49,11 @@ def preprocess_example(
     tokenizer: AutoTokenizer,
     SYSTEM_MESSAGE: str,
 ):
-    board_state: str = example["game_sequence"]
     prefix = [
         {"role": "system", "content": SYSTEM_MESSAGE},
         {
             "role": "user",
-            "content": get_board_state_string(board_state),
+            "content": example["prompt"],
         },
         {"role": "assistant", "content": "<think>"},
     ]
@@ -104,18 +65,18 @@ def preprocess_example(
 def soft_format_reward_func(completion, **kwargs) -> float:
     """Reward function that checks if the completion has a specific format."""
     completion = "<think>" + completion
-    pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
+    pattern = r"<think>.*?</think>\s*<response>.*?</response>"
     if re.search(pattern, completion, flags=re.DOTALL):
         return 0.1
     return 0.0
 
 def extract_xml_answer(text: str) -> str:
-    answer = text.split("<answer>")[-1]
-    answer = answer.split("</answer>")[0]
+    answer = text.split("<response>")[-1]
+    answer = answer.split("</response>")[0]
     return answer.strip()
     
 
-def c4_reward_func(completion: str, next_move: List[float]) -> float:
+def c4_dim_reward_func(completion: str, expected: int) -> float:
     """
     Evaluates the reward for a model's move in Connect Four.
 
@@ -128,38 +89,26 @@ def c4_reward_func(completion: str, next_move: List[float]) -> float:
     """
     try:
         move = int(extract_xml_answer(completion))  # model's move, expected to be between 1 and 7
-        if 1 <= move <= 7:
-            return next_move[move - 1]  # zero-based index
+        if move == expected:
+            return 1.0
         else:
-            return -1.0  # Invalid move (out of range)
+            return 0.0
     except (ValueError, IndexError, TypeError):
-        return -1.0  # Handle invalid extraction or non-integer result
+        return 0.0  # Handle invalid extraction or non-integer result
 
 
 
 def compute_reward(completion: str, sample: Dict[str, Any], EOS_TOKEN: str) -> Tuple[float, Dict[str, float]]:
 
-    next_move = sample["next_move"]
+    expected = sample["expected_answer"]
     format_reward = soft_format_reward_func(completion)
-    equation_reward = c4_reward_func(completion=completion, next_move=next_move)
+    equation_reward = c4_dim_reward_func(completion=completion, expected=expected)
 
     reward = format_reward + equation_reward
-
-    # Categorize the move based on equation_reward
-    is_optimal = 1.0 if equation_reward == 1.0 else 0.0
-    is_good = 1.0 if 0.5 < equation_reward < 1.0 else 0.0
-    is_poor = 1.0 if 0.0 < equation_reward <= 0.5 else 0.0
-    is_zero = 1.0 if equation_reward == 0.0 else 0.0
-    is_illegal = 1.0 if equation_reward == -1.0 else 0.0
 
     metrics = {
         "format_reward": format_reward,
         "equation_reward": equation_reward,
-        "is_optimal_move": is_optimal,
-        "is_good_move": is_good,
-        "is_poor_move": is_poor,
-        "is_zero_move": is_zero,
-        "is_illegal_move": is_illegal,
     }
 
     return reward, metrics
@@ -433,7 +382,7 @@ def main():
     EOS_TOKEN = tokenizer.convert_ids_to_tokens(EOS_TOKEN_ID)
 
     
-    dataset = load_dataset("Parsenal110/c4_optimal", split="train")
+    dataset = load_dataset("Parsenal110/ic_c4_dim", split="train")
     dataset = (ex for ex in dataset if ex["stage"] in ["midgame", "endgame"])
     dataset = dataset.map(
         preprocess_example,
@@ -501,7 +450,7 @@ def main():
 
     # Wandb for logging
     wandb.init(
-        project="r1-aha-moment",
+        project="ic_c4_dim",
         name=RUN_NAME,
         config={
             "model_name": MODEL_NAME,
