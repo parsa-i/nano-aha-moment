@@ -20,6 +20,7 @@ from tqdm import trange
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel
 from vllm import LLM, SamplingParams
 from typing import List
+from math_verify import parse, verify
 
 import wandb
 from utils import (
@@ -88,14 +89,13 @@ def c4_dim_reward_func(completion: str, expected: int) -> float:
         float: The reward value for the chosen move. Returns -1.0 if the move is invalid.
     """
     try:
-        match = re.search(r'\d+', extract_xml_answer(completion))
-        first_integer = int(match.group())
-        #move = int(extract_xml_answer(completion))  # model's move, expected to be between 1 and 7
-        if first_integer == expected:
+        ans = parse(extract_xml_answer(completion))
+        ref = parse(str(expected))
+        if verify(ans, ref):
             return 1.0
         else:
             return 0.0
-    except (ValueError, IndexError, TypeError):
+    except:
         return 0.0  # Handle invalid extraction or non-integer result
 
 
@@ -385,7 +385,6 @@ def main():
 
     
     dataset = load_dataset("Parsenal110/ic_c4_dim", split="train")
-    dataset = (ex for ex in dataset if ex["stage"] in ["midgame", "endgame"])
     dataset = dataset.map(
         preprocess_example,
         num_proc=6,
