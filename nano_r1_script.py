@@ -88,8 +88,10 @@ def c4_dim_reward_func(completion: str, expected: int) -> float:
         float: The reward value for the chosen move. Returns -1.0 if the move is invalid.
     """
     try:
-        move = int(extract_xml_answer(completion))  # model's move, expected to be between 1 and 7
-        if move == expected:
+        match = re.search(r'\d+', extract_xml_answer(completion))
+        first_integer = int(match.group())
+        #move = int(extract_xml_answer(completion))  # model's move, expected to be between 1 and 7
+        if first_integer == expected:
             return 1.0
         else:
             return 0.0

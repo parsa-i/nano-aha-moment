@@ -283,13 +283,15 @@ def dump_episodes(
     )
 
     if not is_eval:
-        print(f"########## Example 1 (Reward: {rewards[0]}, Response Length: {response_lengths[0]})")
+        print(f"########## Example 1")
         print(f"#### Query:\n`{query_texts[0]}`")
         print(f"#### Response:\n`{response_texts[0]}`\n\n")
+        print(f"(Reward: {rewards[0]}, Response Length: {response_lengths[0]})")
 
-        print(f"########## Example 2 (Reward: {rewards[1]}, Response Length: {response_lengths[1]})")
+        print(f"########## Example 2")
         print(f"#### Query:\n`{query_texts[1]}`")
         print(f"#### Response:\n`{response_texts[1]}`\n\n")
+        print(f"(Reward: {rewards[1]}, Response Length: {response_lengths[1]})")
 
     if is_eval:
         episodes_dir = exp_dir / "eval_episodes"
