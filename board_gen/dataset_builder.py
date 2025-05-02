@@ -34,8 +34,8 @@ def render_board(board: Board) -> tuple[str, str]:
     return fmt_fn(rows), fmt_fn.__name__
 
 def make_sample(sample_id: int, pct_base: float = 0.7) -> dict:
-    width  = random.randint(4, 8)
-    height = random.randint(4, 8)
+    width  = random.randint(4, 6)
+    height = random.randint(4, 6)
     moves  = gen_random_moves(width, height)
     board  = Board.from_sequence(width, height, moves)
 

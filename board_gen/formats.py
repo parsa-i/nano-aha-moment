@@ -48,10 +48,5 @@ def format_underlined(board):
 FORMATTERS = [
     format_simple,
     format_with_labels,
-    format_table,
-    format_bordered,
-    format_square_brackets,
-    format_commas,
-    format_underlined,
 ]
 

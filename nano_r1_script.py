@@ -106,7 +106,7 @@ def compute_reward(completion: str, sample: Dict[str, Any], EOS_TOKEN: str) -> T
     format_reward = soft_format_reward_func(completion)
     equation_reward = c4_dim_reward_func(completion=completion, expected=expected)
 
-    reward = format_reward + equation_reward
+    reward = equation_reward
 
     metrics = {
         "format_reward": format_reward,
